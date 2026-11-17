@@ -1,0 +1,6 @@
+# Optional: run against a real Redis instead of the in-process fakeredis.
+#   docker compose up -d && REDIS_URL=redis://localhost:6379/0 python demo.py
+services:
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]

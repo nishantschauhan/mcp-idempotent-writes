@@ -1,0 +1,11 @@
+
+[1] create_ticket_unsafe  (no idempotency key)
+  attempt 1: Timed out while waiting for response to ClientRequest. Waited 0.5 seconds. -> retrying
+  attempt 2: ok -> {'id': 2, 'title': 'Printer on floor 3 is on fire', 'created_at': 1794908001.2732081}
+  server: 2 executions, 2 tickets   <-- duplicate
+
+[2] create_ticket  (idempotency key, stored result in Redis)
+  attempt 1: Timed out while waiting for response to ClientRequest. Waited 0.5 seconds. -> retrying
+  attempt 2: ok -> {'id': 1, 'title': 'Printer on floor 3 is on fire', 'created_at': 1794908002.2876813, 'replayed': True}
+  server: 1 execution,  1 ticket    <-- retry replayed the stored result
+

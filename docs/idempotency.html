@@ -1,0 +1,64 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { width: 1200px; height: 1200px; background: #0f1419; color: #e6edf3;
+         font-family: "Inter", "Helvetica Neue", Arial, sans-serif; padding: 80px 72px 64px; display: flex; flex-direction: column; justify-content: space-between; }
+  h1 { font-size: 50px; line-height: 1.12; font-weight: 800; letter-spacing: -0.5px; }
+  h1 span { color: #ff6b6b; }
+  .sub { font-size: 24px; color: #9aa7b3; margin-top: 14px; }
+  .panel { margin-top: 0; border-radius: 18px; padding: 26px 30px 24px; }
+  .bad  { background: #2a1517; border: 2px solid #5c2328; }
+  .good { background: #10241a; border: 2px solid #1f5a3a; }
+  .label { font-size: 22px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+  .bad .label { color: #ff8a8a; } .good .label { color: #6ee7a1; }
+  .flow { display: flex; align-items: center; gap: 12px; margin-top: 18px; flex-wrap: nowrap; }
+  .box { background: #1b2229; border: 1.5px solid #34404c; border-radius: 10px; padding: 12px 14px;
+         font-size: 20px; font-weight: 600; white-space: nowrap; }
+  .box small { display: block; font-size: 15px; font-weight: 400; color: #9aa7b3; margin-top: 3px; }
+  .arrow { color: #6b7785; font-size: 26px; }
+  .warn { border-color: #b45309; color: #fbbf24; }
+  .redis { border-color: #1f8a5a; color: #6ee7a1; }
+  .result { margin-top: 18px; font-size: 26px; font-weight: 700; }
+  .bad .result { color: #ff8a8a; } .good .result { color: #6ee7a1; }
+  .code { margin-top: 0; font-family: "JetBrains Mono", Menlo, Consolas, monospace; font-size: 19px; color: #c9d1d9;
+          background: #161b22; border-radius: 14px; padding: 20px 24px; line-height: 1.6; white-space: pre;
+          border: 1.5px solid #2a313a; }
+  .k { color: #ff7b72; } .s { color: #a5d6ff; } .c { color: #8b949e; }
+  .foot { font-size: 19px; color: #6b7785; display: flex; justify-content: space-between; }
+</style></head>
+<body>
+  <div><h1>The agent said <span>"called once"</span>.<br>The server ran it twice.</h1>
+  <div class="sub">A real MCP server, a client that retries on timeout, and one fix.</div></div>
+
+  <div class="panel bad">
+    <div class="label">Without an idempotency key</div>
+    <div class="flow">
+      <div class="box">Agent</div><div class="arrow">→</div>
+      <div class="box">create_ticket<small>write commits</small></div><div class="arrow">→</div>
+      <div class="box warn">timeout<small>reply too slow</small></div><div class="arrow">→</div>
+      <div class="box">retry<small>same call</small></div><div class="arrow">→</div>
+      <div class="box">write again</div>
+    </div>
+    <div class="result">2 executions · 2 tickets · client saw 1 success</div>
+  </div>
+
+  <div class="panel good">
+    <div class="label">With an idempotency key</div>
+    <div class="flow">
+      <div class="box">Agent<small>key = hash(turn+args)</small></div><div class="arrow">→</div>
+      <div class="box">create_ticket<small>SET key NX</small></div><div class="arrow">→</div>
+      <div class="box warn">timeout</div><div class="arrow">→</div>
+      <div class="box">retry<small>same key</small></div><div class="arrow">→</div>
+      <div class="box redis">Redis hit<small>return stored result</small></div>
+    </div>
+    <div class="result">1 execution · 1 ticket · retry gets the same id</div>
+  </div>
+
+  <div class="code">claimed = <span class="k">await</span> r.set(slot, <span class="s">"pending"</span>, nx=<span class="k">True</span>, ex=TTL)  <span class="c"># atomic claim</span>
+<span class="k">if not</span> claimed: <span class="k">return</span> stored_result(slot)               <span class="c"># replay, don't re-write</span>
+ticket = <span class="k">await</span> insert_ticket(title)
+<span class="k">await</span> r.set(slot, done(ticket), ex=TTL)</div>
+
+  <div class="foot"><span>Python · MCP SDK · Redis · pytest in CI</span><span>Repo + tests: link in comments</span></div>
+</body></html>
